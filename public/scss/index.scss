@@ -1,12 +1,14 @@
-#scene-canvas {
+.scene-canvas {
     flex: 1;
 }
 
 #drawcanvas {
+    // flex: 1;
     position: absolute;
     aspect-ratio: 1;
-    height: 100%;
+    height: 50%;
     right: 0%;
     bottom: 0%;
-    background-color: red;
+
+    border: #aaa solid 3px;
 }

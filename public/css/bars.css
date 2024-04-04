@@ -53,6 +53,7 @@ body {
 }
 
 #main-content-container {
+  display: flex;
   position: relative;
   flex: 1;
 }

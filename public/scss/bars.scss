@@ -5,7 +5,7 @@ $border-width: 3px;
 $border-color: #aaa;
 
 $border: $border-color solid $border-width;
-$border-spacing: 0px;
+$border-spacing: 2%;
 $min-border: 5px;
 
 #root {
@@ -14,6 +14,8 @@ $min-border: 5px;
 
 	display: flex;
 	flex-direction: column;
+
+    overflow: hidden;
 }
 
 body {
@@ -71,8 +73,10 @@ body {
 }
 
 #main-content-container {
-	display: flex;
-	flex-direction: column;
+	// display: flex;
+	// flex-direction: column;
+
+    position: relative;
 	flex: 1;
 }
 
@@ -84,6 +88,11 @@ body {
 }
 
 #tabsbar {
+    width: 100%;
+    height: $tab-width;
+}
+
+#toolbar {
     width: 100%;
     height: $tab-width;
 }

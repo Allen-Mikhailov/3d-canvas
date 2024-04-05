@@ -95,6 +95,27 @@ body {
 #toolbar {
     width: 100%;
     height: $tab-width;
+
+    display: flex;
+}
+
+.toolbar-tool {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+
+    // justify-self: right;
+    
+
+    height: 70%;
+    aspect-ratio: 1;
+
+    grid-row: 1;
+    display: flex;
+
+    filter: opacity(25%);
+
+    cursor: pointer;
 }
 
 #sidebar {

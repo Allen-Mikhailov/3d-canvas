@@ -1,6 +1,14 @@
 import { Bars } from "./bars.js"
+
 import * as THREE from "./threejs/three.js"
 import { OrbitControls } from './threejs/OrbitControls.js';
+import { DragControls } from "./threejs/DragControls.js"
+
+import { EffectComposer } from "./threejs/EffectComposer.js";
+import { ShaderPass } from "./threejs/ShaderPass.js";
+import { FXAAShader } from "./threejs/FXAAShader.js"
+import { RenderPass } from "./threejs/RenderPass.js"
+import { OutlinePass } from "./threejs/OutlinePass.js"
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -20,16 +28,43 @@ ctx.fillStyle = "blue"
 
 let hasUpdates = false
 
-
-
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff)
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
-const light = new THREE.AmbientLight( 0x404040 ); // soft white light
-scene.add( light );
-
 const renderer = new THREE.WebGLRenderer();
+
+const composer = new EffectComposer(renderer);
+
+const renderPass = new RenderPass( scene, camera );
+composer.addPass( renderPass );
+
+const outlinePass= new OutlinePass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight), //resolution parameter
+      scene,
+      camera
+);
+outlinePass.edgeStrength = 3.0;
+outlinePass.edgeGlow = 1.0;
+outlinePass.edgeThickness = 3.0;
+outlinePass.pulsePeriod = 0;
+outlinePass.usePatternTexture = false; // patter texture for an object mesh
+outlinePass.visibleEdgeColor.set("#000000"); // set basic edge color
+outlinePass.hiddenEdgeColor.set("#000000"); // set edge color when it hidden by other objects
+composer.addPass(outlinePass);
+
+// const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+// const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+// const cube = new THREE.Mesh( geometry, material );
+// scene.add( cube );
+
+const effectFXAA = new ShaderPass(FXAAShader);
+effectFXAA.uniforms["resolution"].value.set(
+  1 / window.innerWidth,
+  1 / window.innerHeight
+);
+effectFXAA.renderToScreen = true;
+composer.addPass(effectFXAA);
 
 const controls = new OrbitControls( camera, renderer.domElement );
 controls.update();
@@ -123,13 +158,19 @@ function update_canvas_size()
   camera.aspect = width / height
   renderer.setSize( width, height, false);
   camera.updateProjectionMatrix();
+  composer.setSize(width, height);
+
+    effectFXAA.uniforms["resolution"].value.set(
+      1 / width,
+      1 / height
+    );
   renderer.render( scene, camera );
 }
 
 update_canvas_size()
 bars.events.connect("main-content-resize", update_canvas_size)
 
-var mouseDown = 0;
+var mouseDown = false;
 let drawing = false;
 
 let drawColor = "#00aa00"
@@ -141,7 +182,7 @@ function drawCircle(e)
   var x = Math.round((e.clientX - rect.left)/rect.width * canvasScale);
   var y = Math.round((e.clientY - rect.top)/rect.height * canvasScale); 
 
-  cfx.fillStyle = drawCircle
+  ctx.fillStyle = drawColor
   ctx.beginPath()
   ctx.moveTo(x, y)
   ctx.arc(x, y, brushRadius, 0, Math.PI*2)
@@ -152,20 +193,49 @@ function drawCircle(e)
   hasUpdates = true
 }
 
+let selectedCanvas
+
 document.body.onmousedown = function(e) { 
   mouseDown = true;
 
+  const [x3d, y3d] = getRelativePosition(e.clientX, e.clientY, renderer.domElement)
+  const [x2d, y2d] = getRelativePosition(e.clientX, e.clientY, draw_canvas)
 
-
-  pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-	pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+  pointer.x = ( x3d ) * 2 - 1;
+	pointer.y = - ( y3d ) * 2 + 1;
 
   raycaster.setFromCamera( pointer, camera );
   var intersects = raycaster.intersectObject(scene, true);
-  let foundSelectTarget
+  let selectTarget
+  for (let i = 0; i < intersects.length; i++)
+  {
+    if (intersects[i].object == mesh)
+    {
+      selectTarget = mesh
+    }
+  }
 
-  drawing = true
-  drawCircle(e)
+  if (selectTarget)
+  {
+    // Select Color
+    if (selectedCanvas == selectTarget) {return;}
+    selectedCanvas = selectTarget
+
+    outlinePass.selectedObjects = [selectedCanvas]
+
+  } else if (x2d >= 0 && x2d <= 1 && y2d >= 0 && y2d <= 1) {
+
+    if (x2d < 0 || x2d > 1 || y2d < 0 || y2d > 1) {return;}
+
+    drawing = true
+    drawCircle(e)
+  } else {
+    if (selectedCanvas)
+    {
+      outlinePass.selectedObjects = []
+      selectedCanvas = null
+    }
+  }
 }
 document.body.onmouseup = function() {
   mouseDown = false;
@@ -182,6 +252,7 @@ function animate() {
   controls.update();
 
 	renderer.render( scene, camera );
+  composer.render();
 }
 animate();
 

@@ -78,6 +78,8 @@ class Bars
         })
 
         main_content_resizer.observe(this.main_content)
+
+        this.toolbar_tools = {}
     }
 
     render()
@@ -91,6 +93,15 @@ class Bars
         this.root.appendChild(CreateHorizontalBar())
 
         this.root.appendChild(this.main_content)
+    }
+
+    addTool(name, icon, funct)
+    {
+        const tool = createElement("div", null, "toolbar-tool")
+        tool.backgroundImage = icon
+        tool.onclick = funct
+        this.toolbar_tools[name] = [tool, name, icon, funct]
+        this.toolbar.appendChild(tool)
     }
 }
 

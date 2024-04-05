@@ -27,6 +27,7 @@ draw_canvas.id = "drawcanvas"
 ctx.fillStyle = "blue"
 
 let hasUpdates = false
+let orbit_control = true
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff)
@@ -131,6 +132,36 @@ canvas_texture.side = THREE.DoubleSide
 scene.add(mesh);
 
 camera.position.z = 5;
+
+const drag_controls = new DragControls([mesh], camera, renderer.domElement)
+
+drag_controls.mode = "rotate"
+drag_controls.rotateSpeed = 3
+
+drag_controls.addEventListener( 'dragstart', function ( event ) {
+
+	// event.object.material.emissive.set( 0xaaaaaa );
+  orbit_control = false
+  controls.enabled = false
+} );
+
+console.log(mesh.rotation)
+
+let euler = new THREE.Euler( 0, 0, 0.0, 'XYZ' )
+drag_controls.addEventListener( 'drag', function ( event ) {
+
+	// event.object.material.emissive.set( 0xaaaaaa );
+  // console.log(mesh.rotation)
+  euler._x = mesh.rotation._x
+  mesh.setRotationFromEuler(euler)
+} );
+
+drag_controls.addEventListener( 'dragend', function ( event ) {
+
+	// event.object.material.emissive.set( 0x000000 );
+  orbit_control = true
+  controls.enabled = true
+} );
 
 bars.render()
 
@@ -249,7 +280,8 @@ function animate() {
   
   mesh.position.set(0, 0, 0);
 
-  controls.update();
+  // if (orbit_control)
+  //   controls.update();
 
 	renderer.render( scene, camera );
   composer.render();

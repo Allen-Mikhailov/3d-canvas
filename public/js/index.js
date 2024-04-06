@@ -30,6 +30,10 @@ let default_object = () => {
 let objects = {
   "fake key": extend(default_object(), {
     "type": "canvas",
+  }),
+  "fake key2": extend(default_object(), {
+    "type": "canvas",
+    "position_x": 3
   })
 }
 
@@ -179,6 +183,11 @@ canvas_geometry.setAttribute( 'uv', new THREE.BufferAttribute( new Float32Array(
 canvas_geometry.setAttribute('position', new THREE.Float32BufferAttribute(canvas_geometry_vertices, 3));
 canvas_geometry.setIndex(canvas_geometry_indices);
 
+function update_canvas_borders(key)
+{
+
+}
+
 function read_object_transform(key)
 {
 
@@ -203,8 +212,9 @@ function add_canvas(key, object)
   const canvas = document.createElement("canvas")
   canvas.width = canvas_resolution
   canvas.height = canvas_resolution
+  canvas.id = "canvas:"+key
 
-  const texture = new THREE.CanvasTexture(draw_canvas)
+  const texture = new THREE.CanvasTexture(canvas)
   const material = new THREE.MeshBasicMaterial( { map: texture, color: 0xffffff,transparent: true } );
   material.side = THREE.DoubleSide
   const mesh = new THREE.Mesh(canvas_geometry, material);
@@ -271,15 +281,27 @@ function update_selected(new_select, new_tool)
       const index = canvas_border_outline_pass.selectedObjects.indexOf(object_extras[new_select].mesh)
       canvas_border_outline_pass.selectedObjects.splice(index, 1)
       outlinePass.selectedObjects = [object_extras[new_select].mesh]
+
+      if (objects[new_select].type == "canvas")
+      {
+        // Transfering Canvas Data
+        const draw_ctx = draw_canvas.getContext("2d")
+        draw_ctx.clearRect(0, 0, canvas_resolution, canvas_resolution)
+        draw_ctx.drawImage(object_extras[new_select].canvas, 0, 0)
+      }
     }
   }
+
+  // Disable/Enable canvas
+  draw_canvas.style.display = (new_select && objects[new_select].type == "canvas")?"block":"none"
 
 
   if (new_select)
   {
     if (TransformTools[new_tool])
     {
-      transform_controls.attach(object_extras[key].mesh)
+      transform_controls.attach(object_extras[new_select].mesh)
+      transform_controls.setMode(new_tool)
     } else {
       transform_controls.detach()
     }
@@ -289,7 +311,9 @@ function update_selected(new_select, new_tool)
   }
 
   selected_object = new_select
+  selected_tool = new_tool
 }
+update_selected(null, "select")
 
 bars.render()
 
@@ -335,8 +359,8 @@ function drawCircle(e)
 {
   if (!drawing) {return;}
   var rect = draw_canvas.getBoundingClientRect();
-  var x = Math.round((e.clientX - rect.left)/rect.width * canvasScale);
-  var y = Math.round((e.clientY - rect.top)/rect.height * canvasScale); 
+  var x = Math.round((e.clientX - rect.left)/rect.width * canvas_resolution);
+  var y = Math.round((e.clientY - rect.top)/rect.height * canvas_resolution); 
 
   drawCircleRaw(ctx, x, y)
 
@@ -367,9 +391,12 @@ document.body.onmousedown = function(e) {
         selectTarget = key
       })
     }
+
+    if (x2d >= 0 && x2d <= 1 && y2d >= 0 && y2d <= 1) {
   
-    if (selectTarget)
-    {
+      drawing = true
+      drawCircle(e)
+    } else if (selectTarget) {
       // Select Color
       if (selectTarget != selected_object)
       {
@@ -378,10 +405,6 @@ document.body.onmousedown = function(e) {
         update_selected(null, "select")
       }
   
-    } else if (x2d >= 0 && x2d <= 1 && y2d >= 0 && y2d <= 1) {
-  
-      drawing = true
-      drawCircle(e)
     } else {
       if (selected_object)
       {
@@ -398,6 +421,19 @@ document.body.onmouseup = function() {
 }
 
 draw_canvas.onmousemove = drawCircle
+
+document.addEventListener("keydown", function(e) {
+  if (e.key == "r" && selected_object)
+  {
+    update_selected(selected_object, "rotate")
+  } else if (e.key == "t" && selected_object) {
+    update_selected(selected_object, "translate")
+  } else if (e.key == "s" && selected_object) {
+    update_selected(selected_object, "scale")
+  } else if (e.key == "q" && selected_object) {
+    update_selected(selected_object, "select")
+  }
+})
 
 function animate() {
 	requestAnimationFrame( animate );

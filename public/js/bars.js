@@ -105,4 +105,4 @@ class Bars
     }
 }
 
-export { Bars }
+export { Bars, createKey }

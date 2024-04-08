@@ -24,17 +24,32 @@ let default_object = () => {
     "rotation_x": 0,
     "rotation_y": 0,
     "rotation_z": 0,
+
+    "scale_x": 1,
+    "scale_y": 1,
+    "scale_z": 1
   }
 }
 
-let objects = {
-  "fake key": extend(default_object(), {
-    "type": "canvas",
-  }),
-  "fake key2": extend(default_object(), {
-    "type": "canvas",
-    "position_x": 3
-  })
+const data_key = "objects:0.0"
+
+let objects 
+
+const saved_objects = localStorage.getItem(data_key)
+if (saved_objects)
+{
+  objects = JSON.parse(saved_objects)
+  console.log("found existing data",saved_objects )
+} else {
+  objects = {
+    "fake key": extend(default_object(), {
+      "type": "canvas",
+    }),
+    "fake key2": extend(default_object(), {
+      "type": "canvas",
+      "position_x": 3
+    })
+  }
 }
 
 let object_extras = {
@@ -62,6 +77,9 @@ let hasUpdates = false
 let selected_object
 let selected_tool = "select"
 let orbit_control = true
+
+const selected_border_color   = 0xff0000
+const unselected_border_color = 0x000000
 
 const scene = new THREE.Scene();
 
@@ -161,9 +179,9 @@ const canvas_geometry = new THREE.BufferGeometry();
 
 const canvas_geometry_vertices = [
   -1, -1, 0,
-  1, -1, 0,
-  1, 1, 0,
-  -1, 1, 0
+  1,  -1, 0,
+  1,  1,  0,
+  -1, 1,  0
 ];
 
 const canvas_geometry_indices = [
@@ -185,12 +203,51 @@ canvas_geometry.setIndex(canvas_geometry_indices);
 
 function update_canvas_borders(key)
 {
+  const extras = object_extras[key]
+  const mesh = extras.mesh
 
+  const top = new THREE.Vector3(0, 1, 0).applyQuaternion(mesh.quaternion).multiplyScalar(mesh.scale.y);
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(mesh.quaternion).multiplyScalar(mesh.scale.x);
+
+  extras.top_border.quaternion.copy(mesh.quaternion); 
+  extras.top_border.position.copy(mesh.position).add(top)
+  extras.top_border.scale.set(mesh.scale.x, 1, 1)
+
+  extras.bottom_border.quaternion.copy(mesh.quaternion); 
+  extras.bottom_border.position.copy(mesh.position).sub(top)
+  extras.bottom_border.scale.set(mesh.scale.x, 1, 1)
+
+  extras.left_border.quaternion.copy(mesh.quaternion); 
+  extras.left_border.position.copy(mesh.position).sub(right)
+  extras.left_border.scale.set(1, mesh.scale.y, 1)
+
+  extras.right_border.quaternion.copy(mesh.quaternion); 
+  extras.right_border.position.copy(mesh.position).add(right)
+  extras.right_border.scale.set(1, mesh.scale.y, 1)
 }
+
+transform_controls.addEventListener("objectChange", function(e) {
+  update_canvas_borders(selected_object)
+  read_object_transform(selected_object)
+  hasUpdates = true
+})
 
 function read_object_transform(key)
 {
+  const object = objects[key]
+  const extras = object_extras[key]
 
+  object.position_x = extras.mesh.position.x
+  object.position_y = extras.mesh.position.y
+  object.position_z = extras.mesh.position.z
+
+  object.rotation_x = extras.mesh.rotation.x
+  object.rotation_y = extras.mesh.rotation.y
+  object.rotation_z = extras.mesh.rotation.z
+
+  object.scale_x =  extras.mesh.scale.x
+  object.scale_y =  extras.mesh.scale.y
+  object.scale_z =  extras.mesh.scale.z
 }
 
 function update_object_transform(key)
@@ -205,7 +262,14 @@ function update_object_transform(key)
   rot._y = object.rotation_y
   rot._z = object.rotation_z
   extras.mesh.setRotationFromEuler(rot)
+
+  extras.mesh.scale.set(object.scale_x, object.scale_y, object.scale_z)
 }
+
+const vertical_line_geometry = new THREE.BufferGeometry().setFromPoints(
+  [new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 1, 0)])
+const horizontal_line_geometry = new THREE.BufferGeometry().setFromPoints(
+  [new THREE.Vector3(-1, 0, 0), new THREE.Vector3(1, 0, 0)])
 
 function add_canvas(key, object)
 {
@@ -217,22 +281,36 @@ function add_canvas(key, object)
   const texture = new THREE.CanvasTexture(canvas)
   const material = new THREE.MeshBasicMaterial( { map: texture, color: 0xffffff,transparent: true } );
   material.side = THREE.DoubleSide
+  material.depthWrite = false
   const mesh = new THREE.Mesh(canvas_geometry, material);
 
   canvas_border_outline_pass.selectedObjects.push(mesh)
 
-  const pos = new THREE.Vector3(0, 0, 0)
   const rot = new THREE.Euler(0, 0, 0, "XYZ")
 
   if (object.image)
   {
+    console.log("displaying image")
     var img = new Image;
     img.src = object.image;
     img.onload = function () {
-        ctx.drawImage(img, 0, 0);
-        texture.needsUpdate = true
+      const canvas_ctx = canvas.getContext("2d")
+      canvas_ctx.drawImage(img, 0, 0);
+      texture.needsUpdate = true
     }; 
   }
+
+  // Borders
+  const border_material = new THREE.LineBasicMaterial({ color: unselected_border_color })
+  const top_border    = new THREE.Line(horizontal_line_geometry, border_material)
+  const bottom_border = new THREE.Line(horizontal_line_geometry, border_material)
+  const left_border   = new THREE.Line(vertical_line_geometry, border_material)
+  const right_border  = new THREE.Line(vertical_line_geometry, border_material)
+
+  scene.add(top_border)
+  scene.add(bottom_border)
+  scene.add(left_border)
+  scene.add(right_border)
   
   const extras = {}
 
@@ -241,12 +319,19 @@ function add_canvas(key, object)
   extras.material = material
   extras.mesh = mesh
 
-  extras.pos = pos
+  extras.top_border = top_border
+  extras.bottom_border = bottom_border
+  extras.left_border = left_border
+  extras.right_border = right_border
+
   extras.rot = rot
+
+  extras.border_material = border_material
 
   object_extras[key] = extras
 
   update_object_transform(key)
+  update_canvas_borders(key)
 
   scene.add(mesh);
 }
@@ -272,15 +357,19 @@ function update_selected(new_select, new_tool)
   {
     if (selected_object)
     {
-      outlinePass.selectedObjects = []
-      canvas_border_outline_pass.selectedObjects.push(object_extras[selected_object].mesh)
+      const border_material = object_extras[selected_object].border_material
+      border_material.color.setHex(unselected_border_color)
+      // outlinePass.selectedObjects = []
+      // canvas_border_outline_pass.selectedObjects.push(object_extras[selected_object].mesh)
     }
 
     if (new_select)
     {
-      const index = canvas_border_outline_pass.selectedObjects.indexOf(object_extras[new_select].mesh)
-      canvas_border_outline_pass.selectedObjects.splice(index, 1)
-      outlinePass.selectedObjects = [object_extras[new_select].mesh]
+      const border_material = object_extras[new_select].border_material
+      border_material.color.setHex(selected_border_color)
+      // const index = canvas_border_outline_pass.selectedObjects.indexOf(object_extras[new_select].mesh)
+      // canvas_border_outline_pass.selectedObjects.splice(index, 1)
+      // outlinePass.selectedObjects = [object_extras[new_select].mesh]
 
       if (objects[new_select].type == "canvas")
       {
@@ -302,6 +391,13 @@ function update_selected(new_select, new_tool)
     {
       transform_controls.attach(object_extras[new_select].mesh)
       transform_controls.setMode(new_tool)
+
+      if (new_tool == "scale")
+      {
+        transform_controls.showZ = false;
+      } else {
+        transform_controls.showZ = true;
+      }
     } else {
       transform_controls.detach()
     }
@@ -444,7 +540,7 @@ function animate() {
   //   controls.update();
 
 	renderer.render( scene, camera );
-  composer.render();
+  // composer.render();
 }
 animate();
 
@@ -452,8 +548,17 @@ animate();
 setInterval(() => {
   if (!hasUpdates) {return;}
 
-  localStorage.setItem("canvas", draw_canvas.toDataURL());
-  console.log("Saved canvas")
+  Object.keys(objects).map((key) => {
+    const obj = objects[key]
+    const extras = object_extras[key]
+
+    obj.image = extras.canvas.toDataURL()
+  })
+
+  localStorage.setItem(data_key, JSON.stringify(objects))
+
+  // localStorage.setItem("canvas", draw_canvas.toDataURL());
+  // console.log("Saved canvas")
 
   hasUpdates = false
   

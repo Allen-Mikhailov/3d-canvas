@@ -61,6 +61,42 @@ function CreateHorizontalBar()
     return main_div
 }
 
+class Button
+{
+    constructor(name, icon, priority)
+    {
+        this.name = name || "unnamed-button"
+        this.icon = icon
+        this.priority = priority || 0
+        this.action = () => {}
+    }
+
+    setAction(action)
+    {
+        this.action = action
+    }
+}
+
+class ButtonGroup
+{
+    constructor(name)
+    {
+        this.name = name
+        this.buttons = {}
+        this.selected = ""
+    }
+
+    addButton(button)
+    {
+        this.buttons[button.name] = button
+    }
+
+    render()
+    {
+
+    }
+}
+
 class Bars
 {
     constructor(root)

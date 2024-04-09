@@ -4,8 +4,10 @@ start cmd /k sass --watch public/scss:public/css
 
 start cmd /k http-server -c-1 -p5345
 
-code .
+echo "Hello 0"
 
-explorer "localhost:5345"
+start cmd /k code .
+
+start http://localhost:5345
 
 exit

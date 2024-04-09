@@ -39,7 +39,7 @@ const saved_objects = localStorage.getItem(data_key)
 if (saved_objects)
 {
   objects = JSON.parse(saved_objects)
-  console.log("found existing data",saved_objects )
+  console.log("found existing data", objects)
 } else {
   objects = {
     "fake key": extend(default_object(), {
@@ -77,6 +77,7 @@ let hasUpdates = false
 let selected_object
 let selected_tool = "select"
 let orbit_control = true
+let in_view_mode = false
 
 const selected_border_color   = 0xff0000
 const unselected_border_color = 0x000000
@@ -94,34 +95,6 @@ const composer = new EffectComposer(renderer);
 
 const renderPass = new RenderPass( scene, camera );
 composer.addPass( renderPass );
-
-const outlinePass= new OutlinePass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight), //resolution parameter
-      scene,
-      camera
-);
-outlinePass.edgeStrength = 3.0;
-outlinePass.edgeGlow = 1.0;
-outlinePass.edgeThickness = 3.0;
-outlinePass.pulsePeriod = 0;
-outlinePass.usePatternTexture = false; // patter texture for an object mesh
-outlinePass.visibleEdgeColor.set("#000000"); // set basic edge color
-outlinePass.hiddenEdgeColor.set("#000000"); // set edge color when it hidden by other objects
-composer.addPass(outlinePass);
-
-const canvas_border_outline_pass = new OutlinePass(
-  new THREE.Vector2(window.innerWidth, window.innerHeight), //resolution parameter
-  scene,
-  camera
-);
-canvas_border_outline_pass.edgeStrength = 1.0;
-canvas_border_outline_pass.edgeGlow = 0.0;
-canvas_border_outline_pass.edgeThickness = 0.25;
-canvas_border_outline_pass.pulsePeriod = 0;
-canvas_border_outline_pass.usePatternTexture = false; // patter texture for an object mesh
-canvas_border_outline_pass.visibleEdgeColor.set("#000000"); // set basic edge color
-canvas_border_outline_pass.hiddenEdgeColor.set("#000000"); // set edge color when it hidden by other objects
-composer.addPass(canvas_border_outline_pass);
 
 const effectFXAA = new ShaderPass(FXAAShader);
 effectFXAA.uniforms["resolution"].value.set(
@@ -284,13 +257,10 @@ function add_canvas(key, object)
   material.depthWrite = false
   const mesh = new THREE.Mesh(canvas_geometry, material);
 
-  canvas_border_outline_pass.selectedObjects.push(mesh)
-
   const rot = new THREE.Euler(0, 0, 0, "XYZ")
 
   if (object.image)
   {
-    console.log("displaying image")
     var img = new Image;
     img.src = object.image;
     img.onload = function () {
@@ -352,7 +322,6 @@ Object.keys(objects).map((key) => {
 const TransformTools = {"translate": true, "rotate": true, "scale": true}
 function update_selected(new_select, new_tool)
 {
-  console.log(new_select, selected_object)
   if (new_select != selected_object)
   {
     if (selected_object)
@@ -413,18 +382,23 @@ update_selected(null, "select")
 
 bars.render()
 
-bars.main_content.appendChild(renderer.domElement)
 bars.main_content.appendChild(draw_canvas)
 renderer.domElement.className = "scene-canvas"
+bars.main_content.prepend(renderer.domElement)
 
 function update_canvas_size()
 {
-  const width = renderer.domElement.clientWidth
-  const height = renderer.domElement.clientHeight
+  const rect = bars.main_content.getBoundingClientRect()
+
+  const width = rect.width
+  const height = rect.height
   camera.aspect = width / height
   renderer.setSize( width, height, false);
   camera.updateProjectionMatrix();
   composer.setSize(width, height);
+
+  renderer.domElement.style.top = `${rect.top}px`
+  renderer.domElement.style.left = `${rect.left}px`
 
   effectFXAA.uniforms["resolution"].value.set(
     1 / width,
@@ -486,6 +460,7 @@ document.body.onmousedown = function(e) {
         if (object_extras[key].mesh == intersects[i].object)
         selectTarget = key
       })
+      if (selectTarget) {break}
     }
 
     if (x2d >= 0 && x2d <= 1 && y2d >= 0 && y2d <= 1) {
@@ -529,6 +504,23 @@ document.addEventListener("keydown", function(e) {
   } else if (e.key == "q" && selected_object) {
     update_selected(selected_object, "select")
   }
+
+  if (e.key == "v")
+  {
+    in_view_mode = !in_view_mode
+    x_axis_line.visible = !in_view_mode
+    y_axis_line.visible = !in_view_mode
+    z_axis_line.visible = !in_view_mode
+
+    Object.keys(objects).map((key) => {
+      const extras = object_extras[key]
+
+      extras.top_border.visible = !in_view_mode
+      extras.bottom_border.visible = !in_view_mode
+      extras.left_border.visible = !in_view_mode
+      extras.right_border.visible = !in_view_mode
+    })
+  }
 })
 
 function animate() {
@@ -540,7 +532,7 @@ function animate() {
   //   controls.update();
 
 	renderer.render( scene, camera );
-  // composer.render();
+  composer.render();
 }
 animate();
 
@@ -556,9 +548,6 @@ setInterval(() => {
   })
 
   localStorage.setItem(data_key, JSON.stringify(objects))
-
-  // localStorage.setItem("canvas", draw_canvas.toDataURL());
-  // console.log("Saved canvas")
 
   hasUpdates = false
   

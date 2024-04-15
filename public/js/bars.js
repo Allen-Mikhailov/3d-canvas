@@ -1,3 +1,7 @@
+const IconTable = {
+    "clear": 'url("/imgs/clear.png")'
+}
+
 function createElement(type, id, className)
 {
     const el = document.createElement(type)
@@ -22,6 +26,12 @@ class Events
     constructor()
     {
         this.connections = {}
+        this.parent = null
+    }
+
+    setParent(parent)
+    {
+        this.parent = parent
     }
 
     connect(event, funct) {
@@ -50,6 +60,11 @@ class Events
                 event_cons[key](...args)
             })
         }
+
+        if (this.parent)
+        {
+            this.parent.fire(event, ...args)
+        }
     }
 }
 
@@ -61,39 +76,80 @@ function CreateHorizontalBar()
     return main_div
 }
 
-class Button
+class IconButton
 {
     constructor(name, icon, priority)
     {
         this.name = name || "unnamed-button"
         this.icon = icon
-        this.priority = priority || 0
         this.action = () => {}
+
+        this.elements = []
     }
 
     setAction(action)
     {
         this.action = action
     }
+
+    toggleSelected()
+    {
+
+    }
+
+    toggleActive()
+    {
+
+    }
+
+    render(parent)
+    {
+        const element = createElement("div", null, "iconbutton")
+        element.style.backgroundImage = IconTable[icon]?IconTable[icon]:icon
+
+        element.onclick = (e) => {
+            if (this.action)
+                this.action(e)
+        }
+
+        this.elements.push(element)
+
+        parent.appendChild(element)
+
+        return element
+    }
 }
 
-class ButtonGroup
+class IconButtonGroup
 {
     constructor(name)
     {
         this.name = name
-        this.buttons = {}
+        this.buttons = []
         this.selected = ""
     }
 
     addButton(button)
     {
-        this.buttons[button.name] = button
+        this.buttons.push(button)
     }
 
-    render()
+    render(parent)
     {
+        const element = document.createElement("div")
+        element.className = "iconbuttongroup"
+        parent.appendChild(this.element)
+    }
+}
 
+class Bar 
+{
+    constructor()
+    {
+        this.elements = []
+
+        const element = document.createElement("div")
+        element.className = "bar"
     }
 }
 
@@ -107,8 +163,6 @@ class Bars
 
         this.main_content = createElement("div", "main-content-container")
 
-        this.events = new Events();
-
         const main_content_resizer = new ResizeObserver(entities => {
             this.events.fire("main-content-resize")
         })
@@ -116,6 +170,8 @@ class Bars
         main_content_resizer.observe(this.main_content)
 
         this.toolbar_tools = {}
+
+        this.events = new Events();
     }
 
     render()
@@ -129,6 +185,11 @@ class Bars
         this.root.appendChild(CreateHorizontalBar())
 
         this.root.appendChild(this.main_content)
+    }
+
+    setEvents(events)
+    {
+        this.events = events
     }
 
     addTool(name, icon, funct)

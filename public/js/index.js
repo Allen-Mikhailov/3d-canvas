@@ -328,18 +328,13 @@ function update_selected(new_select, new_tool)
     {
       const border_material = object_extras[selected_object].border_material
       border_material.color.setHex(unselected_border_color)
-      // outlinePass.selectedObjects = []
-      // canvas_border_outline_pass.selectedObjects.push(object_extras[selected_object].mesh)
     }
 
     if (new_select)
     {
       const border_material = object_extras[new_select].border_material
       border_material.color.setHex(selected_border_color)
-      // const index = canvas_border_outline_pass.selectedObjects.indexOf(object_extras[new_select].mesh)
-      // canvas_border_outline_pass.selectedObjects.splice(index, 1)
-      // outlinePass.selectedObjects = [object_extras[new_select].mesh]
-
+      
       if (objects[new_select].type == "canvas")
       {
         // Transfering Canvas Data

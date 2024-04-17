@@ -1,4 +1,4 @@
-import { Bars, createKey } from "./bars.js"
+import { Bars, createKey, IconButton, IconButtonSelectGroup, Events } from "./bars.js"
 
 import * as THREE from "./threejs/three.js"
 import { OrbitControls } from './threejs/OrbitControls.js';
@@ -59,7 +59,15 @@ let object_extras = {
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
+const events = new Events()
 const bars = new Bars(document.getElementById("root"))
+
+const tools_select_group = new IconButtonSelectGroup("tool_select", events)
+tools_select_group.addButton("select", "squares")
+tools_select_group.addButton("transform", "transform")
+tools_select_group.addButton("rotate", "rotate")
+tools_select_group.addButton("scale", "scale")
+bars.toolbar.addItem(tools_select_group)
 
 const draw_canvas = document.createElement("canvas")
 const ctx = draw_canvas.getContext("2d")

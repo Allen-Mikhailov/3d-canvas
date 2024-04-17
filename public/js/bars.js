@@ -1,5 +1,9 @@
 const IconTable = {
-    "clear": 'url("/imgs/clear.png")'
+    "clear":     'url("/imgs/clear.png")',
+    "squares":   'url("/imgs/select.png")',
+    "rotate":    'url("/imgs/rotate.png")',
+    "scale":     'url("/imgs/size.png")',
+    "transform": 'url("/imgs/transform.png")',
 }
 
 function createElement(type, id, className)
@@ -68,6 +72,14 @@ class Events
     }
 }
 
+class Layer
+{
+    constructor()
+    {
+        this.parent = null
+    }
+}
+
 function CreateHorizontalBar()
 {
     const main_div = createElement("div", null, "smallborder-horizontal")
@@ -78,11 +90,14 @@ function CreateHorizontalBar()
 
 class IconButton
 {
-    constructor(name, icon, priority)
+    constructor(name, icon)
     {
         this.name = name || "unnamed-button"
         this.icon = icon
         this.action = () => {}
+
+        this.selected = false
+        this.active = true
 
         this.elements = []
     }
@@ -92,29 +107,45 @@ class IconButton
         this.action = action
     }
 
-    toggleSelected()
+    updateState()
     {
-
+        this.elements.map(({element}) => {
+            element.className = `iconbutton${this.selected?" selected":""}${this.active?"":" unactive"}`
+        })
     }
 
-    toggleActive()
+    toggleSelected(toggle)
     {
+        // Checking for no change
+        if (this.selected == toggle) {return;}
 
+        this.selected = toggle
+        this.updateState()
     }
 
-    render(parent)
+    toggleActive(toggle)
+    {
+        // Checking for no change
+        if (this.active == toggle) {return;}
+
+        this.active = toggle
+        this.updateState()
+    }
+
+    render()
     {
         const element = createElement("div", null, "iconbutton")
-        element.style.backgroundImage = IconTable[icon]?IconTable[icon]:icon
+
+        const icon_element = createElement("div", null, "icon")
+        icon_element.style.backgroundImage = IconTable[this.icon]?IconTable[this.icon]:this.icon
+        element.appendChild(icon_element)
 
         element.onclick = (e) => {
             if (this.action)
                 this.action(e)
         }
 
-        this.elements.push(element)
-
-        parent.appendChild(element)
+        this.elements.push({"element": element})
 
         return element
     }
@@ -126,7 +157,8 @@ class IconButtonGroup
     {
         this.name = name
         this.buttons = []
-        this.selected = ""
+
+        this.elements = []
     }
 
     addButton(button)
@@ -134,22 +166,104 @@ class IconButtonGroup
         this.buttons.push(button)
     }
 
-    render(parent)
+    render()
     {
         const element = document.createElement("div")
         element.className = "iconbuttongroup"
-        parent.appendChild(this.element)
+
+        const button_element_list = []
+        this.buttons.map(button => {
+            const button_element = button.render()
+            button_element_list.push(button_element)
+            element.appendChild(button_element)
+        })
+
+        this.elements.push({
+            "element": element,
+            "button_list": button_element_list
+        })
+
+        return element
+    }
+}
+
+class IconButtonSelectGroup extends IconButtonGroup
+{
+    constructor(name, events)
+    {
+        super(name)
+        this.selected = null
+        this.buttons = []
+        this.events = events
+    }
+
+    updateSelected()
+    {
+        this.buttons.map(button => {
+            button.toggleSelected(button.name == this.selected)
+        })
+        this.events.fire(this.name+"_updated", this.selected)
+    }
+
+    setSelected(value)
+    {
+        this.selected = value
+        this.updateSelected()
+    }
+
+    addButton(name, icon)
+    {
+        const button = new IconButton(name, icon)
+        button.setAction((e) => {
+            this.selected = this.selected==name?null:name
+            this.updateSelected()
+        })
+
+        this.buttons.push(button)
+    }
+
+    render()
+    {
+        const element = super.render()
+
+        return element
     }
 }
 
 class Bar 
 {
-    constructor()
+    constructor(name)
     {
         this.elements = []
+        this.items = []
+        this.name = name
+        
+    }
 
-        const element = document.createElement("div")
-        element.className = "bar"
+    addItem(item)
+    {
+        this.items.push(item)
+    }
+
+    render()
+    {
+        const element = createElement("div", null, "bar")
+
+        const item_element_list = []
+        this.items.map(item => {
+            const element_container = createElement("div", null, "bar-item-container")
+            const item_element = item.render()
+            item_element_list.push(item_element)
+            element.appendChild(element_container)
+            element_container.appendChild(item_element)
+        })
+
+        this.elements.push({
+            "element": element,
+            "item_list": item_element_list
+        })
+
+        return element
     }
 }
 
@@ -158,8 +272,8 @@ class Bars
     constructor(root)
     {
         this.root = root
-        this.headbar = createElement("div", "headbar");
-        this.toolbar = createElement("div", "toolbar");
+        this.headbar = new Bar("headbar");
+        this.toolbar = new Bar("toolbar")
 
         this.main_content = createElement("div", "main-content-container")
 
@@ -169,18 +283,18 @@ class Bars
 
         main_content_resizer.observe(this.main_content)
 
-        this.toolbar_tools = {}
-
         this.events = new Events();
     }
 
     render()
     {
-        this.root.appendChild(this.headbar);
+        const headbar_element = this.headbar.render()
+        this.root.appendChild(headbar_element);
 
         this.root.appendChild(CreateHorizontalBar())
 
-        this.root.appendChild(this.toolbar);
+        const toolbar_element = this.toolbar.render()
+        this.root.appendChild(toolbar_element);
 
         this.root.appendChild(CreateHorizontalBar())
 
@@ -191,15 +305,15 @@ class Bars
     {
         this.events = events
     }
-
-    addTool(name, icon, funct)
-    {
-        const tool = createElement("div", null, "toolbar-tool")
-        tool.backgroundImage = icon
-        tool.onclick = funct
-        this.toolbar_tools[name] = [tool, name, icon, funct]
-        this.toolbar.appendChild(tool)
-    }
 }
 
-export { Bars, createKey }
+export { 
+    Bars,
+    
+    Events,
+    createKey, 
+
+    IconButton, 
+    IconButtonGroup, 
+    IconButtonSelectGroup
+}

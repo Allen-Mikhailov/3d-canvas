@@ -64,10 +64,15 @@ const bars = new Bars(document.getElementById("root"))
 
 const tools_select_group = new IconButtonSelectGroup("tool_select", events)
 tools_select_group.addButton("select", "squares")
-tools_select_group.addButton("transform", "transform")
+tools_select_group.addButton("translate", "transform")
 tools_select_group.addButton("rotate", "rotate")
 tools_select_group.addButton("scale", "scale")
 bars.toolbar.addItem(tools_select_group)
+
+const vision_select_group = new IconButtonSelectGroup("icon_select", events)
+vision_select_group.addButton("lines", "lines")
+vision_select_group.addButton("clear", "circle")
+bars.toolbar.addItem(vision_select_group)
 
 const draw_canvas = document.createElement("canvas")
 const ctx = draw_canvas.getContext("2d")
@@ -330,6 +335,8 @@ Object.keys(objects).map((key) => {
 const TransformTools = {"translate": true, "rotate": true, "scale": true}
 function update_selected(new_select, new_tool)
 {
+  console.log("update_selected", new_select, new_tool)
+  tools_select_group.setSelected(new_tool)
   if (new_select != selected_object)
   {
     if (selected_object)
@@ -351,6 +358,10 @@ function update_selected(new_select, new_tool)
         draw_ctx.drawImage(object_extras[new_select].canvas, 0, 0)
       }
     }
+  }
+
+  tools_select_group.action = (name) => {
+    update_selected(selected_object, name)
   }
 
   // Disable/Enable canvas
@@ -381,9 +392,10 @@ function update_selected(new_select, new_tool)
   selected_object = new_select
   selected_tool = new_tool
 }
-update_selected(null, "select")
 
 bars.render()
+
+update_selected(null, "select")
 
 bars.main_content.appendChild(draw_canvas)
 renderer.domElement.className = "scene-canvas"
@@ -497,14 +509,14 @@ document.body.onmouseup = function() {
 draw_canvas.onmousemove = drawCircle
 
 document.addEventListener("keydown", function(e) {
-  if (e.key == "r" && selected_object)
+  if (e.key == "r")
   {
     update_selected(selected_object, "rotate")
-  } else if (e.key == "t" && selected_object) {
+  } else if (e.key == "t") {
     update_selected(selected_object, "translate")
-  } else if (e.key == "s" && selected_object) {
+  } else if (e.key == "s") {
     update_selected(selected_object, "scale")
-  } else if (e.key == "q" && selected_object) {
+  } else if (e.key == "q") {
     update_selected(selected_object, "select")
   }
 
@@ -525,6 +537,8 @@ document.addEventListener("keydown", function(e) {
     })
   }
 })
+
+update_selected(null, "select")
 
 function animate() {
 	requestAnimationFrame( animate );

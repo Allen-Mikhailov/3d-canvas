@@ -105,6 +105,15 @@ body {
   border-top-right-radius: 25%;
   border-bottom-right-radius: 25%;
 }
+.iconbutton:hover {
+  background-color: #c9c9c9;
+}
+.iconbutton:hover .icon {
+  filter: invert(70%);
+}
+.iconbutton.selected {
+  background-color: #bdbdbd;
+}
 .iconbutton.selected .icon {
   filter: invert(100%);
 }

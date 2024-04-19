@@ -4,6 +4,8 @@ const IconTable = {
     "rotate":    'url("/imgs/rotate.png")',
     "scale":     'url("/imgs/size.png")',
     "transform": 'url("/imgs/transform.png")',
+    "circle":    'url("/imgs/circle.png")',
+    "lines":     'url("/imgs/lines.png")',
 }
 
 function createElement(type, id, className)
@@ -195,6 +197,10 @@ class IconButtonSelectGroup extends IconButtonGroup
         this.selected = null
         this.buttons = []
         this.events = events
+        this.action = (name, e) => {
+            this.selected = this.selected==name?null:name
+            this.updateSelected()
+        }
     }
 
     updateSelected()
@@ -215,8 +221,7 @@ class IconButtonSelectGroup extends IconButtonGroup
     {
         const button = new IconButton(name, icon)
         button.setAction((e) => {
-            this.selected = this.selected==name?null:name
-            this.updateSelected()
+            this.action(name, e)
         })
 
         this.buttons.push(button)

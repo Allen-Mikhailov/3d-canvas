@@ -146,8 +146,19 @@ body {
         border-bottom-right-radius: $border-radius;
     }
 
-    &.selected .icon{
-        filter: invert(100%);
+    &:hover {
+        background-color: darken($color: #d6d6d6, $amount: 5%);
+        & .icon{
+            filter: invert(70%);
+        }
+    }
+
+    &.selected 
+    {
+        background-color: darken($color: #d6d6d6, $amount: 10%);
+        & .icon{
+            filter: invert(100%);
+        }
     }
 }
 
